@@ -17,9 +17,9 @@ numtrials = 1;
 %     = noisy_VLFP_2CG(numtp, numtrials, input_file, Delay, Wfrac, Hd);
 % MitLFPs = MitLFPs(:,1);
 % ILFP
-randfrac = 0.75;
-[OSN Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent MitLFPs GraProxLFPs GraDistLFPs FfoLFPs PyrLFPs] ...
-    = noisy_ILFP_2CG(numtp, numtrials, input_file, Delay, Wfrac, randfrac, Hd);
+
+[Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent MitLFPs GraProxLFPs GraDistLFPs FfoLFPs PyrLFPs] ...
+    = noisy_ILFP_2CG(numtp, numtrials, input_file, Delay, Wfrac, Hd);
 MitLFPs = MitLFPs.GradistMit(:,1);
 
 % Raster plots
@@ -27,6 +27,13 @@ mitH = PlotRasterplot(Mitral,param);
 graproxH = PlotRasterplot(GraProximal,param);
 pyrH = PlotRasterplot(Pyramidal,param);
 fbaH = PlotRasterplot(Feedback,param);
+
+mode = 1;
+conn = 1;
+comment = 'near critical point';
+fname = '2CGfull_vary-dGCgmax_4';
+writeparams(input_file,mode,comment,conn,fname)
+
 
 % spike count profile
 scount_mit = zeros(nmit,1);
@@ -112,7 +119,7 @@ xlim([-5 tsim]);ylim([0 nmit])
 set(gca,'fontsize',14)
 xlabel('time (ms)');ylabel('Counts')
 
-ngraprox=100;
+
 ISIgraprox = [];
 PSTHgraprox = zeros(1,dt*numtp/twin);
 for ii = 1:ngraprox
@@ -157,12 +164,12 @@ xlabel('time (ms)');ylabel('Counts')
 
 
 % take a look at membrane voltage
-figure(3)
+figure(333)
 choice = 2;
 plot(timevec,GraProximal{choice}.V)
 set(gca,'fontsize',14)
-title(['GraDistal',num2str(choice)])
-% ylim([0 0.05])
+% title(['GraDistal',num2str(choice)])
+% ylim([-0.08 0.01])
 xlabel('time (ms)');ylabel('V')
 
 
@@ -275,7 +282,7 @@ saveas(pyrH,['LFPpwr_pyr_',app],'tiff')
 %% Input Currents with 2 compartment granule cell (prox and dist)
 mitchoice = 1;
 distchoice = 2;
-proxchoice = 2;
+proxchoice = 8;
 pyrchoice = 3;
 
 glomitH = figure(1)
@@ -304,6 +311,7 @@ plot(timevec,InputCurrent.Idistprox(proxchoice,:))
 set(gca,'fontsize',14)
 title(['Gradist -> Gra soma',num2str(proxchoice),' input'])
 xlabel('time (ms)');ylabel('current')
+ylim([0 8e-3])
 proxdistH = figure(6)
 plot(timevec,InputCurrent.Iproxdist(distchoice,:))
 set(gca,'fontsize',14)

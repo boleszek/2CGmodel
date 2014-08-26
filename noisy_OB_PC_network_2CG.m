@@ -1,4 +1,4 @@
-function [OSN Pglo Glo Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG(inputFile,Delay,Wfrac,randfrac)
+function [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG(inputFile,Delay,Wfrac)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This is an adaption of two programs, bulbmain.m and piriformmain.m,
@@ -18,7 +18,7 @@ function [OSN Pglo Glo Mitral GraProximal GraDistal Feedforward Pyramidal Feedba
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % OUTPUTS:
-% OSN, Pglo, Glo, Mitral, GraProximal, GraDistal, Feedforward, Pyramidal,
+% Mitral, GraProximal, GraDistal, Feedforward, Pyramidal,
 % Feedback  - data structures including parameters and simulated neuronal activity
 % OSNsource  -  odor matrix (simulates odor by stimulating subset of OSN)
 % param      -  model parameters
@@ -69,40 +69,10 @@ if strcmpi(inputFile(end - 2:end),'txt') % if we use a txt as input, the
     
     
     % Create cells
-    if param.flagpreset == true
-        if strcmpi(param.ConnType,'randperm')
-            param.ConnType = 'spatialfix';
-        end
+
         OSNfile = strcat(param.outputPath,param.OSNsource);
-        if strcmp(param.ConnType(1:7),'spatial')
-            Grafile = strcat(param.outputPath,param.Grasource);
-        else
-            Grafile = []; % if network is circular, grafile is not used.
-        end
-        [param,OSNsource,OSN,Mitral,Pglo,Glo,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback] = CreateCells(param,OSNfile,randfrac);
-    else
-        OSN = cell(param.nMitral,1);
-        Mitral = cell(param.nMitral,1);
-        Pglo = cell(param.nMitral,1);
-        Glo = cell(param.nMitral,1);
-        for ii = 1:param.nMitral
-            OSN{ii}.input = []; %no input for now
-            Mitral{ii}.input = [];
-            Pglo{ii}.input = [];
-            Glo{ii}.input = [];
-            Mitral{ii}.Acorrec = 1;
-        end
-        
-        GraProximal = cell(param.nGraprox,1);
-        GraDistal = cell(param.nGradist,1);
-        for ii = 1:param.nGraprox
-            GraProximal{ii}.input = [];
-            GraProximal{ii}.Acorrec = 1;
-        end
-        for ii = 1:param.nGradist
-            GraDistal{ii}.input = [];
-        end
-    end
+        [param,OSNsource,Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback] = CreateCells(param,OSNfile);
+
     
     str = fgetl(fid1);
     
@@ -112,12 +82,6 @@ if strcmpi(inputFile(end - 2:end),'txt') % if we use a txt as input, the
         switch lower(str)
             case '' % It's possible to use blank lines to organize the
                 % neuronal parameters
-            case 'osn'
-                celltype = 'osn';
-            case 'periglomerular'
-                celltype = 'periglomerular';
-            case 'glomerulus'
-                celltype = 'glomerulus';
             case 'mitral'
                 celltype = 'mitral';
             case 'graproximal'
@@ -132,12 +96,6 @@ if strcmpi(inputFile(end - 2:end),'txt') % if we use a txt as input, the
                 celltype = 'feedback';
             otherwise
                 switch celltype
-                    case 'osn'
-                        OSN = SetNeuronParameters(OSN,param.nMitral,str);
-                    case 'periglomerular'
-                        Pglo = SetNeuronParameters(Pglo,param.nMitral,str);
-                    case 'glomerulus'
-                        Glo = SetNeuronParameters(Glo,param.nMitral,str);
                     case 'mitral'
                         Mitral = SetNeuronParameters(Mitral,param.nMitral,str);
                     case 'graproximal'
@@ -161,50 +119,14 @@ if strcmpi(inputFile(end - 2:end),'txt') % if we use a txt as input, the
     fclose(fid1); % Close input file
     fname = inputFile(1:end - 3);
     fname = strcat(fname,'mat');
-    save(fname,'OSN','Pglo','Glo','Mitral','GraProximal','GraDistal','Feedforward','Pyramidal','Feedback','OSNsource','param');
+    save(fname,'Mitral','GraProximal','GraDistal','Feedforward','Pyramidal','Feedback','OSNsource','param');
     
 elseif strcmpi(inputFile(end - 2:end),'mat') %if the input file is .mat
     % we have to
-    load(inputFile,'OSN','Pglo','Glo','Mitral','GraProximal','GraDistal','OSNsource','param');
+    load(inputFile,'Mitral','GraProximal','GraDistal','OSNsource','param');
 end
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Set cell position
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if strcmp(param.ConnType(1:7),'spatial')
-    % Show in terminal parameters that are not used for this simulation
-    disp('Parameter NGraCon is not being used');
-    if param.flagpreset == true
-        disp('Using pre set data from source file');
-        param.MitralRadius = Mitral{1}.CellRadius;
-        param.GranuleRadius = GraProximal{1}.CellRadius;
-        % Inside the PreSetCellPosition we also define the area-input
-        % correction factor. Whe the shape of the bulb is not a toroid, we
-        % have to multiply the inputs received by neurons on the borders so
-        % that the overall activity to each neurons will be similar.
-        Mitral = PreSetCellPosition(Mitral,param,OSNsource);
-        GraProximal = PreSetCellPosition(GraProximal,param,OSNsource);
-    else
-        Mitral = SetCellPosition(Mitral,param);
-        GraProximal = SetCellPosition(GraProximal,param);
-    end
-elseif strcmp(param.ConnType,'randperm')
-    % Show in terminal parameters that are not used for this simulation
-    disp('Parameters ConnChance, BulbH and BulbW are not being used');
-    if param.flagpreset == true
-        disp('NSO source file is not being used!');
-    end
-elseif strcmp(param.ConnType,'circular')
-    Mitral = PreSetCellPosition(Mitral,param,OSNsource);
-%     GraProximal = PreSetCellPosition(GraProximal,param,Graproxsource);
-% I got rid of Grasource because my granule cells are
-% positioned randomly
-end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -213,30 +135,8 @@ end
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[OSN Pglo Glo Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent] = NeuroActivity(OSN,Pglo,Glo,Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback,param,OSNsource);
+[Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent] = NeuroActivity(Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback,param,OSNsource);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Reduce granular matrix
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if strcmp(param.ConnType(1:7),'spatial')
-    Matrices = CompactGraMat(param,Grasource,GraProximal);
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Saving data
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% if param.flagsavemitral == true
-%     SaveMitralFile(Mitral,param);
-% end
-% if param.savePyr == true
-%     SavePyramidalFile(Pyramidal,MitFile);
-% end
 
 toc;
 end
@@ -259,51 +159,32 @@ function param = SetNetworkParameters(param,str,Delay,Wfrac)
 % tsim: simulation time (in ms)
 % tinit: stimulus begin (in ms)
 % tfinal: stimulus end (in ms)
-% nMitral: number of mitral cells (and olfactory sensory neurons (OSN))
+% nMitral: number of mitral cells
 % nGradist: number of granule distal synapses
 % nGraprox: number of granule cell soma
-% ConnType = type of connection between cells. Can be 'randperm' cells are
-% randomly connected; 'spatialvar' the closer/father to each other the cells are
-% the higher chance of being connected; 'spatialfix' cells that are close
-% to each other have a fixed chance of being connected; 'spatialfile' uses
-% the granule cell file to define the chance of connection between two
-% neurons; 'circle' works as a 1d plot to test contrast;
 % GraGracon = if true, granule cells connect to each other
 % DistalON = if true graded inhibitory distal Granule dendrites are present
 % ProximalON = if true spiking inhibitory proximal Granule soma are present
-% SpikingInput = if true, OSNs are integrate and fire neurons
-% SpikingPglo = if true, Pglos are integrate and fire neurons, otherwise 
-% they're a logistic function.
 % BulbH = Bulb height (in distance units)
 % BulbW = Bulb width (in distance units)
-% NoiseOSN = OSN noise std
-% NoisePgl = Periglomerular cell noise std
 % NoiseMit = Mitral cell noise std
 % NoiseGraprox = Granule proximal dendrite noise std
 % NoiseGradist = Granule distal dendrite noise std
-% PreSet = true if we use pre set position for the cells
-% SaveMitral = true if we want to save the mitral cell activity for the
-% piriform cortex model
 % mFactor = multiplicative factor. number of granule cells = number of
 % mitral cells * mFactor
 % OSNsource = source of the OSN inputs.
 % Odorant = odortant number.
 % Grasource = source of the granule cells (used only for comparison
 % (add the name of new parameters here)
-% loadOSNdata = true if we want to use pre-processed data.
-% toroid = true if we want to use a toroid shape, if false, we use a
-% cilinder shape
-% weights = if true, the synatic weight of some connectios is variable
-% (using learning)
 % mitAHP = if true, mitral cells show AHP
 % graAHP = if true, granule cells show AHP
 % graLLD = if true, granule cells show LLD
 % Respiration = if true, the input is modulated by an oscillation
 % representing the respiration
 % RespFreq = Respiratory frequency
-% PreSetOBConn = true if we want to use pre-processed OB connections
 % Iext = external current to OSNs
 % Inoise = noise fraction of OSN input
+% randfrac = fraction of uniform input to MCs
 % SpikeV = Spike voltage
 % CChanceGraMit = Chance of connection between Gra and Mit
 % CChanceGraGra = Chance of connection between Gra
@@ -330,11 +211,8 @@ function param = SetNetworkParameters(param,str,Delay,Wfrac)
 % * NoiseFfo = Feedforward neuron noise std
 % * NoisePyr = Pyramidal cell noise std
 % * NoiseFba = Feedback cell noise std
-% * PreSetPCConn = true if we want to use always the same set of connections
-% * Mitralsource = source of the Pyramidal inputs.
 % * NoiseParam = true if we want a slighly variation on the parameters
 % * Noiselevel = percetage of variation in each parameter
-% * savePyr = true if we want to save Pyramidal cells for the HDB program
 % * pyrAHP = if true, pyrAHP is ON
 %
 %
@@ -350,7 +228,6 @@ function param = SetNetworkParameters(param,str,Delay,Wfrac)
 % flagWOPvar     = if true pyr-gra weights are scaled at each timestep with Wfrac
 % flagWGRAMITvar = if true gra-mit weights are scaled at each timestep with Wfrac
 % flagWMitGravar = if true mit-gra weights are scaled at each timestep with Wfrac
-% PreSetOBPCConn = if false then random Pyr-Gr and Mit-Pyr connections are automatically generated
 % CChancePyrGra  = Chance of connection between Pyramidal and Granule cells
 % CChanceMitPyr  = Chance of connection between Mitral cells and Pyramidal cells
 % CChanceMitFfo  = Chance of connection between Mitral cells and Feedforward cells
@@ -383,31 +260,21 @@ switch lower(ParName)
     case 'tfinal'
         param.tfinal = str2num(ParValue); %stimulus end
     case 'nmitral'
-        param.nMitral = str2num(ParValue); %number of Mitral cells (and OSN)
+        param.nMitral = str2num(ParValue); %number of Mitral cells
     case 'ngradist'
         param.nGradist = str2num(ParValue); %number of granule distal synapses
     case 'ngraprox'
         param.nGraprox = str2num(ParValue); %number of Granule cell soma
-    case 'conntype'
-        param.ConnType = ParValue; %type of connection
     case 'gragracon'
         param.GraGracon = str2num(ParValue); %Gra-Gra connections
     case 'distalon'
         param.DistalON = str2num(ParValue); %flag distal gra dendrites
     case 'proximalon'
         param.ProximalON = str2num(ParValue); %flag proximal gra dendrites
-    case 'spikinginput'
-        param.SpikingInput = str2num(ParValue); %flag spiking OSNs
-    case 'spikingpglo'
-        param.SpikingPglo = str2num(ParValue); %flag spiking Pglo cells
     case 'bulbh'
         param.BulbH = str2num(ParValue); %Bulb height
     case 'bulbw'
         param.BulbW = str2num(ParValue); %Bulb width
-    case 'noiseosn'
-        param.flagnoiseosn = str2num(ParValue); %noise OSN
-    case 'noisepgl'
-        param.flagnoisepgl = str2num(ParValue); %noise Periglomerular
     case 'noisemit'
         param.noisemit = str2num(ParValue); %noise Mitral
     case 'noisegraprox'
@@ -424,14 +291,6 @@ switch lower(ParName)
         param.Odorant = str2num(ParValue); %odorant number
     case 'grasource'
         param.Grasource = ParValue; %name of the file source for granule cells information
-    case 'loadosndata'
-        param.flagOSNdata = str2num(ParValue); %flag load preset OSN data
-    case 'toroid'
-        param.flagtoroid = str2num(ParValue); %flag toroid shape
-    case 'weights'
-        param.flagweights = str2num(ParValue); %flag use of synaptic weights
-    case 'savemitral'
-        param.flagsavemitral = str2num(ParValue); %flag save mitral file
     case 'mitahp'
         param.mitAHP = str2num(ParValue); %flag presence of mitral AHP
     case 'graahp'
@@ -442,12 +301,12 @@ switch lower(ParName)
         param.flagRespiration = str2num(ParValue); %flag respiratory modulation
     case 'respfreq'
         param.RespFreq = str2num(ParValue); %respiratory frequency
-    case 'presetobconn'
-        param.flagPreSetOBConn = str2num(ParValue); %load Mit-Gra conn
     case 'iext'
         param.Iext = str2num(ParValue); %External current to OSNs
     case 'inoise'
         param.Inoise = str2num(ParValue); %noise fraction of OSN input
+    case 'randfrac'
+        param.randfrac = str2num(ParValue); %fraction of uniform input (scaling input to MCs)
     case 'spikev'
         param.SpikeV = str2num(ParValue); %Spike voltage
     case 'cchancegramit'
@@ -477,16 +336,10 @@ switch lower(ParName)
         param.noisepyr = str2num(ParValue); %noise Pyramidal cells
     case 'noisefba'
         param.noisefba = str2num(ParValue); %noise Feedback neurons
-    case 'presetpcconn'
-        param.flagPreSetPCConn = str2num(ParValue); %flag preset connections
-    case 'mitralsource'
-        param.Mitralsource = ParValue; %name of the file source for Pyramidal information
     case 'noiseparam'
         param.NoiseParam = str2num(ParValue); %flag noise on the parameters
     case 'noiselevel'
         param.NoiseLevel = str2num(ParValue); %noise value
-    case 'savepyr'
-        param.savePyr = str2num(ParValue); %save pyramidal data
     case 'pyrahp'
         param.pyrAHP = str2num(ParValue); %flag use of pyrAHP
 
@@ -508,8 +361,6 @@ switch lower(ParName)
         param.flagWGRAMITvar = str2num(ParValue); %if true gramit weights scale with time by Wfrac    
     case 'flagwmitgravar'
         param.flagWMitGravar = str2num(ParValue); %if true mitgra weights scale with time by Wfrac        
-    case 'presetobpcconn'
-        param.flagPreSetOBPCConn = str2num(ParValue); %flag preset connections
     case 'cchancepyrgra'
         param.CChancePyrGra = str2num(ParValue); %chance of connection between Pyramidal and Granule cells
     case 'cchancemitpyr'
@@ -524,109 +375,33 @@ end
 end
 
 
-function [param,OSNsource,OSN,Mitral,Pglo,Glo,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback] = CreateCells(param,OSNfile,randfrac)
+function [param,OSNsource,Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback] = CreateCells(param,OSNfile)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % This function creates neurons based on the OSN file source (excel file)
 %
-% Modified by Boleszek Osinski on 06/16/2013
+% Modified by Boleszek Osinski on 06/16/2013 and 08/13/2014
 % Licurgo de Almeida
 % 12/21/2010
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% if strcmp(param.ConnType(1:7),'spatial')
-%     
-%     mfactor = round(sqrt(param.mFactor)); %multiplicative factor of columns and rows, the number of
-%     %granule cell
-%     
-%     param.mFactor = mfactor^2; %mFactor is corrected to the real value
-%     
-%     warning('off','MATLAB:xlsread:ActiveX');
-%     OSNsource.inputs = xlsread(OSNfile); %read excel file with OSN information
-%     Grasource.outputs = xlsread(Grafile); %read excel file with Granule cells information
-%     warning('on','MATLAB:xlsread:ActiveX')
-%     OSNsource.inputs = OSNsource.inputs / max(max(OSNsource.inputs)); %normalize data
-%     [X,Y] = size(OSNsource.inputs);
-%     Grasource.outputs = Grasource.outputs / max(max(Grasource.outputs)); %normaliza data
-%     disp(['Number of Mitral cells changed to ' num2str(X * Y)]);
-%     param.nMitral = X * Y;
-%     OSN = cell(param.nMitral,1);
-%     Mitral = cell(param.nMitral,1);
-%     Pglo = cell(param.nMitral,1);
-%     Glo = cell(param.nMitral,1);
-%     OSNsource.X = zeros(param.nMitral,1);
-%     OSNsource.Y = OSNsource.X;
-%     count = 1;
-%     for ii = 1:Y
-%         for jj = 1:X
-%             OSN{count}.input = OSNsource.inputs(jj,ii);
-%             Mitral{count}.input = []; %no input for now
-%             Pglo{count}.input = [];
-%             Glo{count}.input = [];
-%             OSNsource.X(count) = jj;
-%             OSNsource.Y(count) = ii;
-%             count = count + 1;
-%         end
-%     end
-%     
-%     disp(['Number of Granule cells changed to ' num2str((X * mfactor) * (Y * mfactor))]);
-%     param.nGraprox = (X * mfactor) * (Y * mfactor);
-%     GraProximal = cell(param.nGraprox,1);
-%     GraDistal = cell(param.nGradist,1);
-%     Grasource.X = zeros(param.nGraprox,1);
-%     Grasource.Y = Grasource.X;
-% 
-%     if strcmp(param.ConnType,'spatialfile')
-%         auxMat = imresize(Grasource.outputs,mfactor); %resize matrix
-%     end
-%     count = 1;
-%     for ii = 1:(Y * mfactor)
-%         for jj = 1:(X * mfactor)
-%             GraProximal{count}.input = [];
-%             GraDistal{count}.input = [];
-%             Grasource.X(count) = jj;
-%             Grasource.Y(count) = ii;
-%             if strcmp(param.ConnType,'spatialfile')
-%                 GraProximal{count}.Connchance = auxMat(jj,ii);
-%                 GraDistal{count}.Connchance = auxMat(jj,ii);
-%             end
-%             count = count + 1;
-%         end
-%     end
-%     
-%     % Preset also changes the size of the network
-%     disp(['Bulb high changed to ' num2str(X) ' and Buld width changed to ' num2str(Y)]);
-%     param.BulbH = X;
-%     param.BulbW = Y;
-    
-% elseif strcmp(param.ConnType,'circular')
+
+% input pattern to MCs
     aux_inputs = load(OSNfile); %read file with OSN information
 %    OSNsource.inputs = ones(param.nMitral,1);
       OSNsource.inputs = aux_inputs.inputmatrand(param.Odorant,:);
-      OSNsource.inputs(OSNsource.inputs<randfrac) = 1;
+      OSNsource.inputs(OSNsource.inputs<param.randfrac) = 1;
 %    OSNsource.inputs = aux_inputs.inputmat(param.Odorant,:);
-    %OSNsource.inputs = OSNsource.inputs / max(OSNsource.inputs); %normalize data
-    OSN = cell(param.nMitral,1);
+    %OSNsource.inputs = OSNsource.inputs / max(OSNsource.inputs); %%normalize data
+    
+    
     Mitral = cell(param.nMitral,1);
-    Pglo = cell(param.nMitral,1);
-    Glo = cell(param.nMitral,1);
-    OSNsource.X = zeros(param.nMitral,1);
-    if length(OSNsource.inputs) ~= param.nMitral
-        msgbox('Input file and number of cells are different!','ERROR');
-        return;
-    end
     for ii = 1:param.nMitral
-        OSN{ii}.input = OSNsource.inputs(ii);
-        OSN{ii}.label = 'OSN';
         Mitral{ii}.input = []; %no input for now
         Mitral{ii}.label = 'Mitral';
-        Pglo{ii}.input = [];
-        Pglo{ii}.label = 'Pglo';
-        Glo{ii}.input = [];
-        Glo{ii}.label = 'Glo';
-        OSNsource.X(ii) = ii;
     end
+    
     GraProximal = cell(param.nGraprox,1);
     GraDistal = cell(param.nGradist,1);
     for ii = 1:param.nGraprox
@@ -637,7 +412,7 @@ function [param,OSNsource,OSN,Mitral,Pglo,Glo,GraProximal,GraDistal,Feedforward,
         GraDistal{ii}.input = [];
         GraDistal{ii}.label = 'GraDistal';
     end
-% end
+
 
 Pyramidal = cell(param.nPyramidal,1);
 Feedforward = cell(param.nPyramidal,1);
@@ -948,93 +723,15 @@ while countcell < ncells
 end
 end
 
-function Cell = PreSetCellPosition(Cell,param,source)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% This function set the position on different neurons based on presets from
-% excel files.
-% Licurgo de Almeida 12/22/2010
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if strcmp(param.ConnType(1:7),'spatial')
-    
-    if length(Cell) == param.nMitral
-        for ii = 1:param.nMitral
-            Cell{ii}.X = source.X(ii);
-            Cell{ii}.matX = source.X(ii); %position in the pcolor matrix
-            Cell{ii}.Y = source.Y(ii);
-            Cell{ii}.matY = source.Y(ii);
-            if param.flagtoroid == true
-                Cell{ii}.Acorrec = 1;
-            else
-                Cell{ii}.Acorrec = AreaCorrection(source.Y(ii),param.BulbW,param.MitralRadius + param.GranuleRadius);
-            end
-        end
-    else
-        dSize = round(sqrt(param.mFactor));
-        x = (1 / dSize:1 / dSize:param.BulbH);
-        y = (1 / dSize:1 / dSize:param.BulbW);
-        countx = 1;
-        county = 1;
-        for ii = 1:param.nGraprox
-            Cell{ii}.X = x(countx);
-            Cell{ii}.matX = countx;
-            Cell{ii}.Y = y(county);
-            Cell{ii}.matY = county;
-            if param.flagtoroid == true
-                Cell{ii}.Acorrec = 1;
-            else
-                Cell{ii}.Acorrec = AreaCorrection(y(county),param.BulbW,param.MitralRadius + param.GranuleRadius);
-            end
-            countx = countx + 1;
-            if countx > length(x)
-                countx = 1;
-                county = county + 1;
-            end
-        end
-    end
-    
-elseif strcmp(param.ConnType,'circular')
-    
-    for ii = 1:length(source.X)
-        Cell{ii}.X = source.X(ii);
-    end
-    
-end
-end
-
-function AC = AreaCorrection(pos,Wsize,radius)
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% This function defines the area-input correction factor. When the shape of
-% the bulb is not a toroid, we have to multiply the inputs received by 
-% neurons on the borders so that the overall activity to each neurons will
-% be similar.
-% This function is called from PreSetCellPosition.m
-% Licurgo de Almeida
-% 01/26/2011
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if (pos + radius) <= Wsize && (pos - radius) >= 0
-    AC = 1;
-else
-    x = min([pos,Wsize - pos]);
-    PA = ((pi / 2) * (radius^2)) + (x * sqrt((radius^2) - (x^2))) +...
-    ((radius^2) * atan(x / sqrt((radius^2) - (x^2))));
-    AC = (pi * (radius^2)) / PA;
-
-end
-end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MAIN FUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [OSN Pglo Glo Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent] = NeuroActivity(OSN,Pglo,Glo,Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback,param,OSNsource)
+function [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent] = NeuroActivity(Mitral,GraProximal,GraDistal,Feedforward,Pyramidal,Feedback,param,OSNsource)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -1065,10 +762,7 @@ end
 
 nds = param.nGradist/param.nGraprox; % number of distal synapses per granule cell
 
-if param.flagPreSetOBConn  == true
-    Savefile = strcat(param.outputPath,'ConnData'); % connectivity matrices
-    save(Savefile,'MatGraMit','MatGraGra');
-else
+
     % random connectivity
         MatGradistMit = SetConnections(param.nMitral,param.nGradist,param.CChanceGraMit);
         MatMitGradist = MatGradistMit'; % reciprocal synapses
@@ -1079,28 +773,20 @@ else
         for ii = 1:param.nGraprox
             MatProxDist((nds*(ii-1)+1):nds*ii,ii) = 1;
         end
-end
 
 %%%%%   PC   %%%%%
-if param.flagPreSetPCConn  == true
-    Savefile = strcat(param.outputPath,'ConnData');
-    load(Savefile,'MatPyrFba','MatFbaPyr','MatFfoPyr','MatPyrPyr');
-else
+
     MatPyrFba = SetConnections(param.nFeedback,param.nPyramidal,param.CChancePyrFba);
     MatFbaPyr = SetConnections(param.nPyramidal,param.nFeedback,param.CChanceFbaPyr);
     MatFfoPyr = SetConnections(param.nPyramidal,param.nPyramidal,param.CChanceFfoPyr);
     MatPyrPyr = SetConnections(param.nPyramidal,param.nPyramidal,param.CChancePyrPyr);
-end
+
 
 %%%%%   OB-PC   %%%%%
-if param.flagPreSetOBPCConn  == true
-    Savefile = strcat(param.outputPath,'ConnData');
-    save(Savefile,'MatPyrGra','MatMitPyr','MatMitFfo');
-else
+
     MatPyrGraprox = SetConnections(param.nGraprox,param.nPyramidal,param.CChancePyrGra);
     MatMitPyr = SetConnections(param.nPyramidal,param.nMitral,param.CChanceMitPyr);
     MatMitFfo = SetConnections(param.nPyramidal,param.nMitral,param.CChanceMitFfo);
-end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set weights matrix -- PC
@@ -1108,17 +794,12 @@ end
 
 
 %%%%%   OB   %%%%%
-if param.flagPreSetOBConn  == true
-    Savefile = strcat(param.outputPath,'LearnData'); % learned weights
-    load(Savefile,'wGraMit','wGraGra','wGloMit');
-    wMitGradist = wGraMit';
-    wPglMit = wGloMit;
-else
+
     wGloMit = eye(param.nMitral)*Mitral{1}.wAMPAGL;
     wPglMit = wGloMit;
-end
 
-if param.flagPreSetOBConn  == false
+
+
     wGABAMit = zeros(param.nMitral,1);
     for ii = 1:param.nMitral
         wGABAMit(ii) = Mitral{ii}.wGABAGR;
@@ -1138,14 +819,11 @@ if param.flagPreSetOBConn  == false
     wMitGradistAMPA = SetWeights(MatMitGradist,wAMPAGradist,param);
     wMitGradistNMDA = SetWeights(MatMitGradist,wNMDAGradist,param);
     wProxProx = SetWeights(MatProxProx,wGABAGraProx,param);
-end
+
 
 
 %%%%%   PC   %%%%%
-if param.flagPreSetOBConn  == true
-    Savefile = strcat(param.outputPath,'LearnData'); % learned weights
-    load(Savefile,'wFbaPyr','wPyrPyr','wFfoPyr','wPyrFba');
-else
+
     wGABAPyr = zeros(param.nPyramidal,1);
     wAMPAPYPyr = wGABAPyr;
     wGABAFFPyr = wGABAPyr;
@@ -1164,37 +842,10 @@ else
     end
     wPyrFba = SetWeights(MatPyrFba,wAMPAFba,param);
 
-%     flag_normalize = false; % flag_normalize is true when the learning rule has
-%     % no unlearning and we try to store many memories.
-% 
-%     if flag_normalize == false
-%         wPyrPyr = wPyrPyr .* W;
-%     else
-%         X = reshape(W,1,size(W,1) * size(W,2));
-%         I = X == 0;
-%         X(I) = [];
-%         X = sort(X,'descend');
-%         if strcmp(Wsource,'AChOn')
-%             wPyrPyr = wPyrPyr .* (W / mean(X(1:round(length(X) * 0.04))));
-%         elseif strcmp(Wsource,'AChOf')
-%             wPyrPyr = wPyrPyr .* (W / (mean(X(1:round(length(X) * 0.04))) / 0.56)); %correction factor
-%         else
-%             wPyrPyr = wPyrPyr .* 0;
-%         end
-%     end
-% 
-%     if strcmp(param.Mitralsource(1:5),'AChOn')
-%         wPyrPyr = wPyrPyr .* 0; %if ACho is on, these connections are inactive
-%     end
-
-end
 
 
 %%%%%   OB-PC   %%%%%
-if param.flagPreSetOBPCConn  == true
-    Savefile = strcat(param.outputPath,'LearnData'); % learned weights
-    load(Savefile,'wMitPyr','wMitFfo','wPyrGra');
-else
+
     wAMPAPyr = zeros(param.nPyramidal,1);
     wAMPAFfo = wAMPAPyr;
     for ii = 1:param.nPyramidal
@@ -1210,7 +861,6 @@ else
     end
     
     wPyrGraprox = SetWeights(MatPyrGraprox,wAMPAGraprox,param);
-end
 
 
 
@@ -1227,206 +877,6 @@ Iextosn = zeros(param.nMitral,round(param.tsim / param.dt));
 for ii = 1:param.nMitral
     Iextosn(ii,round(param.tinit / param.dt) : round(param.tfinal / param.dt)) = param.Iext * OSNsource.inputs(ii);
 end
-
-
-
-% % Stores the voltage of each OSN at a given time
-% Vosn = zeros(param.nMitral,round(param.tsim / param.dt));
-% % Binary matrix recording only the spikes
-% Sosn = Vosn;
-% 
-% if param.SpikingInput == false
-%     Pfireosn = Vosn; %Pfireosn is the probability of firing when we use
-%     % non-spiking cells
-% end
-% 
-% refracosn = 2; % Refractory period after firing (ms)
-% 
-% Restosn = zeros(param.nMitral,1); % resting potential
-% Threshosn = Restosn; % current firing threshold
-% Hyperosn = Restosn; % hyperpolarization potential
-% Rosn = Restosn; % membrane resistance
-% tauosn = Restosn; % tau neuron
-% countrefracosn = Restosn; % Refractory period counter. This is assumed to
-% % be the same for all OSN so we don't need to add it to the for below.
-% 
-% % ...New parameters should be added here and inside the 'for'...
-% 
-% for ii = 1:param.nMitral
-%     Restosn(ii) = OSN{ii}.Vrest;
-%     Hyperosn(ii) = OSN{ii}.Vhyper;
-%     Rosn(ii) = OSN{ii}.R;
-%     tauosn(ii) = OSN{ii}.tau;
-%     Threshosn(ii) = OSN{ii}.FThresh;
-% end
-% 
-% % Initialize OSN potentials
-% Vosn(:,1) = Restosn;
-% 
-% 
-% if param.flagOSNdata == true %read pre-processed data for OSN
-%     OSNfile = strcat(param.outputPath,'OSNdata');
-%     load(OSNfile,'auxVosn');
-%     if size(auxVosn,1) == size(Vosn,1) && size(auxVosn,2) == size(Vosn,2)
-%         Vosn = auxVosn;
-%         load(OSNfile,'auxSosn');
-%         Sosn = auxSosn;
-%     else
-%         param.flagOSNdata = false; %if the sizes are not correct we don't change
-%         % the variables
-%         disp('param.flagOSNdata was changed to false');
-%     end
-% end
-% 
-% 
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % End of OSN parameters and variables
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % Set periglomerular cell parameters and variables
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% % MOSNConpgl = eye(param.nMitral); % matrix with OSN-Pglo connection
-% % 
-% % Wosnpgl = eye(param.nMitral,param.nMitral); % Excitatory synaptic weights
-% % % between OSNs and Pglo cells
-% % 
-% % if param.flagweights == true
-% %     Wosnpgl = Wosnpgl * 0.5; % If we have learning all synapses start with
-% %     % an average weight
-% % end
-% % 
-% % % Stores the voltage of each Pglo at a given time
-% % Vpgl = zeros(param.nMitral,round(param.tsim / param.dt));
-% % % Binary matrix recording only the spikes
-% % Spgl = Vpgl;
-% % 
-% % if param.SpikingPglo == false
-% %     Pfirepgl = Vpgl; %Pfirepgl is the probability of firing when we use
-% %     % non-spiking cells
-% % end
-% % 
-% % refracpgl = 2; % Refractory period after firing (ms)
-% % 
-% % Restpgl = zeros(param.nMitral,1); % resting potential
-% % Threshpgl = Restpgl; % current firing threshold
-% % Hyperpgl = Restpgl; % hyperpolarization potential
-% % Rpgl = Restpgl; % membrane resistance
-% % taupgl = Restpgl; % tau neuron
-% % countrefracpgl = Restpgl; % Refractory period counter. This is assumed to
-% % % be the same for all PG cells so we don't need to add it to the for below.
-% % gmaxAMPApgl = Restpgl; % Max AMPA conductance
-% % tauAMPA1pgl = Restpgl; % AMPA's rising tau.
-% % tauAMPA2pgl = Restpgl; % AMPA's falling tau.
-% % EAMPApgl = Restpgl; % AMPA's Nernst potential.
-% % IAChpgl = Restpgl; % Additional current when ACh is ON in non-spiking neurons.
-% % 
-% % % ...New parameters should be added here and inside the 'for'...
-% % 
-% % for ii = 1:param.nMitral
-% %     Restpgl(ii) = Pglo{ii}.Vrest;
-% %     Hyperpgl(ii) = Pglo{ii}.Vhyper;
-% %     Rpgl(ii) = Pglo{ii}.R;
-% %     taupgl(ii) = Pglo{ii}.tau;
-% %     Threshpgl(ii) = Pglo{ii}.FThresh;
-% %     gmaxAMPApgl(ii) = Pglo{ii}.gmaxAMPA;
-% %     tauAMPA1pgl(ii) = Pglo{ii}.tauAMPA1;
-% %     tauAMPA2pgl(ii) = Pglo{ii}.tauAMPA2;
-% %     EAMPApgl(ii) = Pglo{ii}.EAMPA;
-% %     IAChpgl(ii) = Pglo{ii}.IACh;
-% % end
-% % 
-% % % Initialize OSN potentials
-% % Vpgl(:,1) = Restpgl;
-% % 
-% % % AMPA time counter. This variable starts with a very negative value just
-% % % to make sure that the currents will be = 0
-% % tAMPA0pgl = zeros(param.nMitral,1) - 10000000;
-% % Iosnpgl = zeros(param.nMitral,1); % Input coming from OSN
-% % maxgAMPApgl = getmaxg(param.dt,tauAMPA1pgl,tauAMPA2pgl); % Get max conductance
-% % % amplitude
-% % 
-% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % % End of periglomerular parameters and variables
-% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % 
-% % 
-% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % % Set glomerulus cell parameters and variables. These cells are actually a
-% % % compartment of mitral cells
-% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % 
-% % MOSNConglo = eye(param.nMitral); % matrix with OSN-Glo connection
-% % 
-% % Wosnglo = eye(param.nMitral,param.nMitral); % Excitatory synaptic weights
-% % % between OSNs and Glo cells
-% % 
-% % if param.flagweights == true
-% %     Wosnglo = Wosnglo * 0.5; % If we have learning all synapses start with
-% %     % an average weight
-% % end
-% % 
-% % % Stores the voltage of each Glo at a given time
-% % Vglo = zeros(param.nMitral,round(param.tsim / param.dt));
-% % 
-% % Pfireglo = Vglo; %Pfireglo is the probability of firing when we use
-% % % non-spiking cells
-% % 
-% % 
-% % Restglo = zeros(param.nMitral,1); % resting potential
-% % Threshglo = Restglo; % current firing threshold
-% % Rglo = Restglo; % membrane resistance
-% % tauglo = Restglo; % tau neuron
-% % gmaxAMPAglo = Restglo; % Max AMPA conductance
-% % tauAMPA1glo = Restglo; % AMPA's rising tau.
-% % tauAMPA2glo = Restglo; % AMPA's falling tau.
-% % EAMPAglo = Restglo; % AMPA's Nernst potential.
-% % gmaxGABAglo = Restglo; % Max GABA conductance
-% % tauGABA1glo = Restglo; % GABA's rising tau.
-% % tauGABA2glo = Restglo; % GABA's falling tau.
-% % EGABAglo = Restglo; % GABA's Nernst potential.
-% % IAChglo = Restglo; % Additional current when ACh is ON in non-spiking neurons.
-% % 
-% % % ...New parameters should be added here and inside the 'for'...
-% % 
-% % for ii = 1:param.nMitral
-% %     Restglo(ii) = Glo{ii}.Vrest;
-% %     Rglo(ii) = Glo{ii}.R;
-% %     tauglo(ii) = Glo{ii}.tau;
-% %     Threshglo(ii) = Glo{ii}.FThresh;
-% %     gmaxAMPAglo(ii) = Glo{ii}.gmaxAMPA;
-% %     tauAMPA1glo(ii) = Glo{ii}.tauAMPA1;
-% %     tauAMPA2glo(ii) = Glo{ii}.tauAMPA2;
-% %     EAMPAglo(ii) = Glo{ii}.EAMPA;
-% %     gmaxGABAglo(ii) = Glo{ii}.gmaxGABA;
-% %     tauGABA1glo(ii) = Glo{ii}.tauGABA1;
-% %     tauGABA2glo(ii) = Glo{ii}.tauGABA2;
-% %     EGABAglo(ii) = Glo{ii}.EGABA;
-% %     IAChglo(ii) = Glo{ii}.IACh;
-% % end
-% % 
-% % % Initialize potentials
-% % Vglo(:,1) = Restglo;
-% % 
-% % % AMPA time counter. This variable starts with a very negative value just
-% % % to make sure that the currents will be = 0
-% % tAMPA0glo = zeros(param.nMitral,1) - 10000000;
-% % Iosnglo = zeros(param.nMitral,1); % Input coming from OSN
-% % maxgAMPAglo = getmaxg(param.dt,tauAMPA1glo,tauAMPA2glo); % Get max conductance
-% % % amplitude
-% % 
-% % % GABA time counter. This variable starts with a very negative value just
-% % % to make sure that the currents will be = 0
-% % tGABA0glo = zeros(param.nMitral,1) - 10000000;
-% % Ipglglo = zeros(param.nMitral,1); % Input coming from Pglo
-% % maxgGABAglo = getmaxg(param.dt,tauGABA1glo,tauGABA2glo); % Get max conductance
-% % % amplitude
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % End of glomerulus parameters and variables
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -1461,37 +911,16 @@ gmaxGABAmit = Restmit; % Max GABA conductance
 tauGABA1mit = Restmit; % GABA's rising tau.
 tauGABA2mit = Restmit; % GABA's falling tau.
 EGABAmit = Restmit; % GABA's Nernst potential.
-Acorrmit = Restmit; % Area correction of the inputs.
+
 if param.mitAHP == true
     gmaxAHPmit = Restmit; % Max AHP conductance
     tauAHPmit = Restmit; % AHP tau.
     EAHPmit = Restmit; % AHP's Nernst potential.
 end
-% 
-% Wglomit = eye(param.nMitral,param.nMitral); % Excitatory synaptic weights
-% % between Glos and mitral cells
-% if param.flagweights == true
-%     Wglomit = Wglomit * 0.5; % If we have learning all synapses start with
-%     % an average weight
-% end
-% 
-% Wpglmit = Wglomit; %for now, these matrices are the same
 
-% if param.flagPreSetOBConn  == true
-%     Savefile = strcat(param.outputPath,'ConnData');
-%     load(Savefile,'MatGraMit');
-%     Savefile = strcat(param.outputPath,'LearnData'); %Mit-gra learned weights
-%     load(Savefile,'Wgramit');
-% else
-%     MatGraMit = zeros(param.nMitral,param.nGranule); % matrix with gra-mit
-%     % connection
-%     Wgramit = zeros(param.nMitral,param.nGranule); % Excitatory synaptic weights
-%     % between mitral cells and granule cells
-% end
 
 % ...New parameters should be added here and inside the 'for'...
 
-% Graded inhibition??????????????
 
 for ii = 1:param.nMitral
     Restmit(ii) = Mitral{ii}.Vrest;
@@ -1512,15 +941,7 @@ for ii = 1:param.nMitral
         EAHPmit(ii) = Mitral{ii}.EAHP;
     end
     
-    
-    if strcmp(param.ConnType(1:7),'spatial')
-        Acorrmit(ii) = Mitral{ii}.Acorrec;
-    else
-        Acorrmit(ii) = 1;
-    end
-    
-    % The firing threshold is different for each neuron. After the neuron
-    % fires, this threshold changes
+
     Threshmit(ii) = Mitral{ii}.FThresh;
     
     
@@ -1605,7 +1026,6 @@ gmaxGABAgraprox = Restgraprox; % Max GABA conductance
 tauGABA1graprox = Restgraprox; % GABA's rising tau.
 tauGABA2graprox = Restgraprox; % GABA's falling tau.
 EGABAgraprox = Restgraprox; % GABA's Nernst potential.
-Acorrgraprox = Restgraprox; % Area correction of the inputs.
 
 if param.graAHP == true
     gmaxAHPgraprox = Restgraprox; % Max AHP conductance
@@ -1647,14 +1067,6 @@ for ii = 1:param.nGraprox
         ELLDgraprox(ii) = GraProximal{ii}.ELLD;
     end
     
-    if strcmp(param.ConnType(1:7),'spatial')
-        Acorrgraprox(ii) = GraProximal{ii}.Acorrec;
-    else
-        Acorrgraprox(ii) = 1;
-    end
-    
-    % The firing threshold is different for each neuron. After the neuron
-    % fires, this threshold changes
     Threshgraprox(ii) = GraProximal{ii}.FThresh;
     
     GraProximal{ii}.PyrgraConnections = MatPyrGraprox(ii,:);
@@ -1760,7 +1172,6 @@ tauNMDA1 = Restgradist; % NMDA's rising tau.
 tauNMDA2 = Restgradist; % NMDA's falling tau.
 
 EAMPAgradist = Restgradist; % AMPA's Nernst potential.
-Acorrgradist = Restgradist; % Area correction of the inputs.
 
 
 % ...New parameters should be added here and inside the 'for'...
@@ -1786,14 +1197,8 @@ for ii = 1:param.nGradist
 %     tauPROX1(ii) = GraProximal{ii}.tauPROX1;
 %     tauPROX2(ii) = GraProximal{ii}.tauPROX2;
 %     EAMPAgraprox(ii) = GraProximal{ii}.EAMPA;
-    if strcmp(param.ConnType(1:7),'spatial')
-        Acorrgradist(ii) = GraDistal{ii}.Acorrec;
-    else
-        Acorrgradist(ii) = 1;
-    end
     
-    % The firing threshold is different for each neuron. After the neuron
-    % fires, this threshold changes
+
     Threshgradist(ii) = GraDistal{ii}.FThresh;
     
     GraDistal{ii}.Connections = MatMitGradist(ii,:);
@@ -2025,139 +1430,6 @@ maxgAMPAfba = getmaxg(param.dt,tauAMPA1fba,tauAMPA2fba); % Get max conductance
 for tt = 2:round(param.tsim / param.dt)
     t = tt * param.dt; % current time
     
-%     % OSN
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     
-%     if param.flagOSNdata == true
-%         I = Vosn(:,tt - 1) == param.SpikeV;
-%         
-%         % Mitral cell variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         tAMPA0glo(I) = t; % new t0 for the Glomerulus AMPA current
-%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         
-%         % Periglomerular cell cell variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         if param.SpikingPglo == true
-%             tAMPA0pgl(I) = t; % new t0 for the Pglo AMPA current
-%         end
-%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     else
-%         
-%         % Forward Euler
-% %         Vosn(:,tt) = Vosn(:,tt - 1) + (param.dt ./ tauosn(:)) .* (Rosn(:) .*...
-% %             Respiration(tt) .* Iextosn(:,tt) - Vosn(:,tt - 1) + Restosn(:));
-% 
-%         % Backwards Euler
-%         Vosn(:,tt) = (Vosn(:,tt - 1) + (param.dt / tauosn(1)) * (Rosn(:) .*...
-%              Respiration(tt) .* Iextosn(:,tt) + Restosn(:))) ./ (1 + param.dt/tauosn(1));
-%         
-%         if param.SpikingInput == true
-%             % If the neuron fired last cycle, neuron potential hyperpotentializes
-%             I = Vosn(:,tt - 1) == param.SpikeV;
-%             Vosn(I,tt) = Hyperosn(I);
-%             
-%             % Mitral cell variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%             tAMPA0mit(I) = t; % new t0 for the Mitral AMPA current
-%             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%             
-%             % Periglomerular cell cell variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%             tAMPA0pgl(I) = t; % new t0 for the Pglo AMPA current
-%             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%             
-%             countrefracosn(I) = refracosn / param.dt; % neurons that just fired
-%             % get into the refractory period
-%             I = countrefracosn > 0;
-%             countrefracosn(I) = countrefracosn(I) - 1;
-%             I = find(countrefracosn == 0); % if countrefracosn = 0 the neuron can fire
-%             % again
-%             if ~isempty(I)
-%                 if param.flagnoiseosn == true
-%                     aux_J = SpikeNoise(Restosn(I),Threshosn(I),param,Vosn(I,tt),'OSN');
-%                     J = find(aux_J);
-%                 else
-%                     J = find(Vosn(I,tt) >= Threshosn(I));
-%                 end
-%                 if ~isempty(J)
-%                     Vosn(I(J),tt) = param.SpikeV; % Action potential
-%                     Sosn(I(J),tt) = 1; % Record spike time
-%                 end
-%             end
-%         else
-%             Pfireosn(:,tt) = NSpikeP(Vosn(:,tt),Restosn,Threshosn);
-%         end
-%     end
-%     
-%     % Periglomerular Cells
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     if param.SpikingInput == true
-%         % Get OSN input to Pglo cells
-%         Iosnpgl(:) = SetI(tauAMPA1pgl(1),tauAMPA2pgl(1),t,tAMPA0pgl,maxgAMPApgl(1),...
-%             Wosnpgl,EAMPApgl(1),Vpgl(:,tt - 1));
-%     else
-%         Iosnpgl(:) = SetInoSpike(gmaxAMPApgl,Pfireosn(:,tt),EAMPApgl,Vpgl(:,tt - 1));
-%     end
-%     
-%     % Periglomerular cell potential
-%     Vpgl(:,tt) = Vpgl(:,tt - 1) + (param.dt ./ taupgl(:)) .* (Rpgl(:) .*...
-%         Iosnpgl(:) + IAChpgl(:) - Vpgl(:,tt - 1) + Restpgl(:));
-%     
-%     if param.SpikingPglo == true
-%         % If the neuron fired last cycle, neuron potential hyperpotentializes
-%         I = Vpgl(:,tt - 1) == param.SpikeV;
-%         Vpgl(I,tt) = Hyperpgl(I);
-%         
-%         % Glomelular cell variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         tGABA0glo(I) = t; % new t0 for the Glo cell GABA current
-%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         
-%         countrefracpgl(I) = (refracpgl / param.dt);
-%         I = countrefracpgl > 0;
-%         countrefracpgl(I) = countrefracpgl(I) - 1;
-%         
-%         
-%         I = find(countrefracpgl == 0); % if countrefracpgl = 0 the neuron can fire
-%         % again
-%         
-%         
-%         if ~isempty(I)
-%             if param.flagnoisepgl == true
-%                 aux_J = SpikeNoise(Restpgl(I),Threshpgl(I),param,Vpgl(I,tt),'Pglo');
-%                 J = find(aux_J);
-%             else
-%                 J = find(Vpgl(I,tt) >= Threshpgl(I));
-%             end
-%             if ~isempty(J)
-%                 Vpgl(I(J),tt) = param.SpikeV; % Action potential
-%                 Spgl(I(J),tt) = 1; % Record spike time
-%             end
-%         end
-%     else
-%         Pfirepgl(:,tt) = NSpikeP(Vpgl(:,tt),Restpgl,Threshpgl);
-%     end
-%     
-%     % Glomeruli Cells
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     % Get OSN input to Glo cells
-%     if param.SpikingInput == true
-%         Iosnglo(:) = SetI(tauAMPA1glo(1),tauAMPA2glo(1),t,tAMPA0glo,maxgAMPAglo(1),...
-%             Wosnglo,EAMPAglo(1),Vglo(:,tt - 1));
-%     else
-%         Iosnglo(:) = SetInoSpike(gmaxAMPAglo,Pfireosn(:,tt),EAMPAglo,Vglo(:,tt - 1));
-%     end
-%     
-%     % Get Periglomerular input to Glo cells
-%     if param.SpikingPglo == true
-%         Ipglglo(:) = SetI(tauGABA1glo(1),tauGABA2glo(1),t,tGABA0glo,maxgGABAglo(1),...
-%             Wpglglo,EGABAglo(1),Vglo(:,tt - 1));
-%     else
-%         Ipglglo(:) = SetInoSpike(gmaxGABAglo,Pfirepgl(:,tt),EGABAglo,Vglo(:,tt - 1));
-%     end
-%     
-%     % Glo cell potential
-%     Vglo(:,tt) = Vglo(:,tt - 1) + (param.dt ./ tauglo(:)) .* (Rglo(:) .*...
-%         (Iosnglo(:) + Ipglglo(:)) - Vglo(:,tt - 1) + Restglo(:));
-% 
-%     Pfireglo(:,tt) = NSpikeP(Vglo(:,tt),Restglo,Threshglo);
-%     
 
     % Mitral Cells
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2781,23 +2053,9 @@ end
 % OSN and Mitral cells
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for ii = 1:param.nMitral
-%     OSN{ii}.V = Vosn(ii,:); % Save neuronal activity
-%     if param.SpikingInput == true
-%         OSN{ii}.S = Sosn(ii,:); % Save spike time
-%     else
-%         OSN{ii}.S = Pfireosn(ii,:);
-%     end
     Mitral{ii}.V = Vmit(ii,:); % Save neuronal activity
     Mitral{ii}.VAHP = VAHPmit(ii,:);
     Mitral{ii}.S = Smit(ii,:); % Save spike time
-%     Pglo{ii}.V = Vpgl(ii,:); % Save neuronal activity
-%     if param.SpikingPglo == true
-%         Pglo{ii}.S = Spgl(ii,:); % Save spike time
-%     else
-%         Pglo{ii}.S = Pfirepgl(ii,:);
-%     end
-%     Glo{ii}.V = Vglo(ii,:); % Save neuronal activity
-%     Glo{ii}.S = Pfireglo(ii,:);
 end
 
 % Granule cells
@@ -2823,12 +2081,7 @@ end
 
 % Save OSN file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if param.flagOSNdata == false && param.SpikingInput == true
-    OSNfile = strcat(param.outputPath,'OSNdata');
-    auxVosn = Vosn;
-    auxSosn = Sosn;
-    save(OSNfile,'auxVosn','auxSosn');
-end
+%--- OSN removed
 
 % Feedforward and Pyramidal cells
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2861,24 +2114,23 @@ end
 
 % Save OB and PC connections
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if param.flagPreSetOBConn  == false
+
     Savefile = strcat(param.outputPath,'ConnData');
     save(Savefile,'MatGradistMit','MatProxProx','MatProxDist','-append');
     Savefile = strcat(param.outputPath,'LearnData'); % learned weights
     save(Savefile,'wGradistMit','wProxProx','wGloMit','-append');
-end
-if param.flagPreSetPCConn  == false
+
     Savefile = strcat(param.outputPath,'ConnData');
     save(Savefile,'MatPyrFba','MatFbaPyr','MatFfoPyr','MatPyrPyr','-append');
     Savefile = strcat(param.outputPath,'LearnData'); % learned weights
     save(Savefile,'wPyrPyr','wFbaPyr','wFfoPyr','wPyrFba','-append');
-end
-if param.flagPreSetOBPCConn  == false
+
+
     Savefile = strcat(param.outputPath,'ConnData');
     save(Savefile,'MatPyrGraprox','MatMitPyr','MatMitFfo','-append');
     Savefile = strcat(param.outputPath,'LearnData'); % learned weights
     save(Savefile,'wPyrGraprox','wMitPyr','wMitFfo','-append');
-end
+
 
 % Save input currents
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3105,15 +2357,8 @@ function I = SpikeNoise(Rest,Thres,param,V,tnet)
 % 12/20/2010
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if strcmp(tnet,'OSN')
-    Vlimit = 0e-3; % Limits where firing chances varied between 0 and 1
-    pfactor = 3;
-    chance = 1;
-elseif strcmp(tnet,'Pglo')
-    Vlimit = 0e-3; % Limits where firing chances varied between 0 and 1
-    pfactor = 1;
-    chance = 1;
-elseif strcmp(tnet,'GraProximal')
+
+if strcmp(tnet,'GraProximal')
     Vlimit = 0e-3; % Limits where firing chances varied between 0 and 1
     pfactor = 3;
     chance = 1;
@@ -3196,39 +2441,6 @@ Ic = (W * g) .* (E - V);
 end
 
 
-function Matrices = CompactGraMat(param,Grasource,GraProximal)
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% This function reduces the size of the granular activity matrix.
-%
-% Licurgo de Almeida
-% 01/07/2011
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mfactor = sqrt(param.mFactor); %this number is fixed in CreateCells.m and
-% necessarily a integer
-
-x = max(Grasource.X);
-y = max(Grasource.Y);
-Gramato = zeros(x,y); %Original granular matrix
-for ii = 1:length(GraProximal)
-    Gramato(Grasource.X(ii),Grasource.Y(ii)) = sum(GraProximal{ii}.S);
-end
-Matrices.OriginalGraMat = Gramato;
-
-[A B] = size(Grasource.outputs);
-mat = zeros(A,B);
-
-for ii = 0:A - 1
-    for jj = 0:B - 1
-        C = mean(mean(Gramato((ii * mfactor) + 1:1:(ii * mfactor) + mfactor,(jj * mfactor) + 1:1:(jj * mfactor) + mfactor)));
-        mat(ii + 1,jj + 1) = C;
-    end
-end
-
-Matrices.Gramat = mat;
-end
 
 function Mat = SetConnections(cell1,cell2,cchance)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

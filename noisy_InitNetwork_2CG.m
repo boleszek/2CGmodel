@@ -3,14 +3,15 @@ Delay = [10 10 0.1 0.1 0.1 0.1 0.1 0.1];
 % Delay = [LOTdelay OPdelay MitGABAdelay GraAMPAdelay GraGABAdelay
 % PyrGABAdelay PyrAMPAdelay IntAMPAdelay]
 input_file = 'noisy_OB_PC_params_2CG.txt';
-[crap, nums] = textread(input_file,'%s %s',10);
+[crap, nums] = textread(input_file,'%s %s',40);
 dt = str2num(nums{2});
 tsim = str2num(nums{3});
 numtp = length(1:round(tsim/dt));
-nmit = str2num(nums{7});
-ngra = str2num(nums{8});
-npyr = str2num(nums{9});
-nfb = str2num(nums{10});
+nmit = str2num(nums{16});
+ngradist = str2num(nums{17});
+ngraprox = str2num(nums{18});
+npyr = str2num(nums{36});
+nfb = str2num(nums{37});
 
 
 

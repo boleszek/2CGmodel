@@ -1,4 +1,4 @@
-function [OSN Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent MitILFPs GraProxILFPs GraDistILFPs FfoILFPs PyrILFPs] = noisy_ILFP_2CG(numtp, numtrials, input_file,Delay,Wfrac,randfrac,Hd)
+function [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback param InputCurrent MitILFPs GraProxILFPs GraDistILFPs FfoILFPs PyrILFPs] = noisy_ILFP_2CG(numtp, numtrials, input_file,Delay,Wfrac,Hd)
 
 
 % Simulate LFP activity using membrane voltage
@@ -25,7 +25,7 @@ FfoILFPs = zeros(numtp,numtrials);
 
 %%% Must sum ALL currents into each neuron type
 for ii = 1:numtrials
-    [OSN Pglo Glo Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG(input_file,Delay,Wfrac,randfrac);
+    [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG_modified(input_file,Delay,Wfrac);
     % Mitral LFP
     nmit  = length(Mitral);
     % Filter input currrents into Mit (ignore respiration)
