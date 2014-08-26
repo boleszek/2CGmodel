@@ -1,5 +1,6 @@
 %% Coupled oscillators with Granule dendrites
 
+% Wutup!
 
 clear all
 
@@ -30,8 +31,8 @@ fbaH = PlotRasterplot(Feedback,param);
 
 mode = 1;
 conn = 1;
-comment = 'overshoot';
-fname = '2CGfull_vary-dGCgmax_3';
+comment = 'near critical point';
+fname = '2CGfull_vary-dGCgmax_4';
 writeparams(input_file,mode,comment,conn,fname)
 
 
@@ -166,7 +167,7 @@ xlabel('time (ms)');ylabel('Counts')
 % take a look at membrane voltage
 figure(333)
 choice = 2;
-plot(timevec,GraDistal{choice}.V)
+plot(timevec,GraProximal{choice}.V)
 set(gca,'fontsize',14)
 % title(['GraDistal',num2str(choice)])
 % ylim([-0.08 0.01])
