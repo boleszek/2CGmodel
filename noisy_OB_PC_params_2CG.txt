@@ -17,8 +17,8 @@ GraGracon true
 NoiseOSN false
 NoisePgl false
 NoiseMit 0.001
-NoiseGraprox 0.001
 NoiseGradist 0.001
+NoiseGraprox 0.001
 PreSet true
 SaveMitral false
 OSNsource glomerulecircle50.mat
