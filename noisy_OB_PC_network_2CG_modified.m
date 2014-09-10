@@ -1,4 +1,4 @@
-function [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG(inputFile,Delay,Wfrac)
+function [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG_modified(inputFile,Delay,Wfrac)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This is an adaption of two programs, bulbmain.m and piriformmain.m,

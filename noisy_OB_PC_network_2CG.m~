@@ -1100,9 +1100,7 @@ tAMPA0pyr_gra = zeros(param.nPyramidal,round(param.tsim / param.dt)) - 10000000;
 OP_delay_vars = param.dt*ceil((2*param.OPvar*rand(param.nPyramidal,1)-param.OPvar)/param.dt);
 % tAMPA0mit_gra is a matrix that stores tau values delayed by mit-gra delay time
 tAMPA0mit_gra = zeros(param.nMitral,round(param.tsim / param.dt)) - 10000000;
-% tAMPA0mit_gra is a matrix that stores tau values from dendritic spikes to
-% sum into somatic compartment
-t0dist_prox = zeros(param.nMitral,round(param.tsim / param.dt)) - 10000000;
+
 
 maxgAMPAgraprox = getmaxg(param.dt,tauPROX1,tauPROX2); % Get max conductance amplitude
 
@@ -1609,19 +1607,6 @@ if param.DistalON == true
         - Vgradist(:,tt - 1) + Restgradist(:) + Vnoisegradist);
     
     
-    % If the neuron fired last cycle, neuron potential hyperpotentializes
-    I = Vgradist(:,tt - 1) == param.SpikeV;
-    Vgradist(I,tt) = Hypermit(I);
-    Vmit_nospike(:,tt) = Vmit(:,tt);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Granule variable %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % This variable is used for input onto gra soma
-        t0dist_prox(I,t:end) = t;
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    
-    
     % "firing probability" for Graded inhibition from distal gra dendrites
     Pfiregradist(:,tt) = NSpikeP(Vgradist(:,tt),Restgradist,Threshgradist);
     
@@ -1644,12 +1629,6 @@ if param.ProximalON == true
 %         Vdistprox(:) = (Vgradist(:,tt)'*MatProxDist)./nds; % Avg dendritic membrane potentials per soma
 %         Idistprox(:) = Idistprox(:)./Rgraprox(:);
         Idistprox_matrix(:,tt) = Idistprox(:);
-        
-        % Ca spikes from distal dendrites into proximal soma
-        Idistprox(:) = SetI(tauPROX1(1),tauPROX2(1),t,tAMPA0gradist(:,tt),maxgAMPAgraprox(1),...
-        gmaxAMPAgraprox,EAMPAgraprox(1),Vgraprox_nospike(:,tt - 1));
-        Idistprox_matrix(:,tt) = Idistprox(:);
-        
     else
         % if distal dendrites are removed, mit synapse directly onto gra
         Imitgraprox(:) = SetI(tauPROX1(1),tauPROX2(1),t,tAMPA0mit_gra(:,tt),maxgAMPAgraprox(1),...
@@ -2320,7 +2299,7 @@ g_norm = 1;
 Mg_conc = 1;
 gamma = 0.004;
 eta = 0.33;
-E_Mg = -70; % assuming that Vrest = -70
+E_Mg = -70e; % assuming that Vrest = -70e-3
 
 % t1 = 60;
 % t2 = 10;

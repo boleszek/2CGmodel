@@ -92,10 +92,10 @@ tauCA1 2
 tauCA2 20
 EAMPA 0e-3
 R 2
-gmaxAMPA 1.02
+gmaxAMPA 0
 Vrest -70e-3
 Vhyper -80e-3
-FThresh -0.050
+FThresh -0.045
 VCAthresh -0.065
 wAMPAMI 0
 wNMDAMI 0.005
@@ -113,7 +113,7 @@ EGABA -75e-3
 EAHP -0.5
 ELLD 8e-3
 R 2
-gmaxAMPA 6.5e-3
+gmaxAMPA 0
 gmaxGABA 30e-3
 gmaxAHP 10
 Vrest -70e-3
@@ -163,6 +163,22 @@ FThresh -62e-3
 wAMPA 0.1
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

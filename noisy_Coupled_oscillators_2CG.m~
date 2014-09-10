@@ -1,5 +1,6 @@
 %% Coupled oscillators with Granule dendrites
 
+% Wutup!
 
 clear all
 
@@ -166,7 +167,7 @@ xlabel('time (ms)');ylabel('Counts')
 % take a look at membrane voltage
 figure(333)
 choice = 2;
-plot(timevec,GraProximal{choice}.V)
+plot(timevec,GraDistal{choice}.V)
 set(gca,'fontsize',14)
 % title(['GraDistal',num2str(choice)])
 % ylim([-0.08 0.01])

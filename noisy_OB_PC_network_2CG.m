@@ -2299,7 +2299,7 @@ g_norm = 1;
 Mg_conc = 1;
 gamma = 0.004;
 eta = 0.33;
-E_Mg = -70; % assuming that Vrest = -70
+E_Mg = -70e-3; % assuming that Vrest = -70e-3
 
 % t1 = 60;
 % t2 = 10;

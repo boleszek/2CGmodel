@@ -25,7 +25,7 @@ FfoILFPs = zeros(numtp,numtrials);
 
 %%% Must sum ALL currents into each neuron type
 for ii = 1:numtrials
-    [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG_modified(input_file,Delay,Wfrac);
+    [Mitral GraProximal GraDistal Feedforward Pyramidal Feedback OSNsource param InputCurrent] = noisy_OB_PC_network_2CG(input_file,Delay,Wfrac);
     % Mitral LFP
     nmit  = length(Mitral);
     % Filter input currrents into Mit (ignore respiration)
