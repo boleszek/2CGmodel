@@ -1148,6 +1148,7 @@ end
 if param.DistalON == true
 % Stores the voltage of each Granule cell at a given time
 Vgradist = zeros(param.nGradist,round(param.tsim / param.dt));
+VgradistNMDA = zeros(param.nGradist,round(param.tsim / param.dt));
 % Binary matrix recording only the spikes
 Sgradist= Vgradist;
 
@@ -1206,6 +1207,7 @@ end
 
 % Initialize Granule cells potentials
 Vgradist(:,1) = Restgradist;
+VgradistNMDA(:,1) = Restgradist;
 
 % proximal granule or pyramidal input currents to gradist
 Iproxdist = zeros(param.nGradist,1); % Input coming from prox to dist
@@ -1606,9 +1608,13 @@ if param.DistalON == true
         (ImitgradistAMPA(:) + ImitgradistNMDA(:) + Iproxdist(:) + Ipyrgradist(:))...
         - Vgradist(:,tt - 1) + Restgradist(:) + Vnoisegradist);
     
+    VgradistNMDA(:,tt) = VgradistNMDA(:,tt - 1) + (param.dt ./ taugradist(:)) .* (Rgradist(:) .*...
+          (ImitgradistNMDA(:) + Iproxdist(:) + Ipyrgradist(:))...
+          - VgradistNMDA(:,tt - 1) + Restgradist(:) + Vnoisegradist);
+    
     
     % "firing probability" for Graded inhibition from distal gra dendrites
-    Pfiregradist(:,tt) = NSpikeP(Vgradist(:,tt),Restgradist,Threshgradist);
+    Pfiregradist(:,tt) = NSpikeP(VgradistNMDA(:,tt),Restgradist,Threshgradist);
     
 end
     
@@ -2299,7 +2305,7 @@ g_norm = 1;
 Mg_conc = 1;
 gamma = 0.004;
 eta = 0.33;
-E_Mg = -70e-3; % assuming that Vrest = -70e-3
+E_Mg = -60e-3; % assuming that Vrest = -70e-3
 
 % t1 = 60;
 % t2 = 10;

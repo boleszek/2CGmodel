@@ -86,8 +86,8 @@ GraDistal
 tau 5
 tauAMPA1 1
 tauAMPA2 2
-tauNMDA1 5
-tauNMDA2 150
+tauNMDA1 2.5
+tauNMDA2 70
 tauCA1 2
 tauCA2 20
 EAMPA 0e-3
@@ -97,8 +97,8 @@ Vrest -70e-3
 Vhyper -80e-3
 FThresh -0.045
 VCAthresh -0.065
-wAMPAMI 0
-wNMDAMI 0.005
+wAMPAMI 0.01
+wNMDAMI 0.006
 
 GraProximal
 tau 5
